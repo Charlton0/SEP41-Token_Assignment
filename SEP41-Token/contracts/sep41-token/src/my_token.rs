@@ -121,6 +121,174 @@ env.storage().persistent().set(
         .unwrap_or(0)
 }
 
+//Mint function creates new token and assign to user, this can only be done by admin
+pub fn mint(
+    env: Env,
+    to: Address,
+    amount: i128,
+) -> Result<(), ContractError> {
+    let admin = Self::get_admin(&env);
+    admin.require_auth();
+
+    if amount <= 0 {
+        return Err(ContractError::InvalidAmount);
+    }
+
+    let mut supply: i128 = env
+        .storage()
+        .persistent()
+        .get(&DataKey::TotalSupply)
+        .unwrap_or(0);
+
+    let balance = Self::balance(env.clone(), to.clone());
+
+    env.storage().persistent().set(
+        &DataKey::Balance(to.clone()),
+        &(balance + amount),
+    );
+
+    env.storage().persistent().set(
+        &DataKey::TotalSupply,
+        &(supply + amount),
+    );
+
+    Ok(())
+}
+
+//Burn function destroys tokens from an address, performed by admin or owner
+pub fn burn(
+    env: Env,
+    from: Address,
+    amount: i128,
+) -> Result<(), ContractError> {
+    from.require_auth();
+
+    if amount <= 0 {
+        return Err(ContractError::InvalidAmount);
+    }
+
+    let balance = Self::balance(env.clone(), from.clone());
+
+    if balance < amount {
+        return Err(ContractError::InsufficientFunds);
+    }
+
+    let mut supply: i128 = env
+        .storage()
+        .persistent()
+        .get(&DataKey::TotalSupply)
+        .unwrap_or(0);
+
+    env.storage().persistent().set(
+        &DataKey::Balance(from.clone()),
+        &(balance - amount),
+    );
+
+    env.storage().persistent().set(
+        &DataKey::TotalSupply,
+        &(supply - amount),
+    );
+
+    Ok(())
+}
+
+//This function allows Spender to move tokens on behalf of owner.
+pub fn transfer_from(
+    env: Env,
+    spender: Address,
+    from: Address,
+    to: Address,
+    amount: i128,
+) -> Result<(), ContractError> {
+    spender.require_auth();
+
+    if amount <= 0 {
+        return Err(ContractError::InvalidAmount);
+    }
+
+    let allowance = Self::allowance(env.clone(), from.clone(), spender.clone());
+
+    if allowance < amount {
+        return Err(ContractError::InsufficientAllowance);
+    }
+
+    let from_balance = Self::balance(env.clone(), from.clone());
+    let to_balance = Self::balance(env.clone(), to.clone());
+
+    if from_balance < amount {
+        return Err(ContractError::InsufficientFunds);
+    }
+
+    // update balances
+    env.storage().persistent().set(
+        &DataKey::Balance(from.clone()),
+        &(from_balance - amount),
+    );
+
+    env.storage().persistent().set(
+        &DataKey::Balance(to.clone()),
+        &(to_balance + amount),
+    );
+
+    // reduce allowance
+    env.storage().persistent().set(
+        &DataKey::Allowance(from.clone(), spender.clone()),
+        &(allowance - amount),
+    );
+
+    Ok(())
+}
+
+//this fuction allows spender to burn tokens from owner
+pub fn burn_from(
+    env: Env,
+    spender: Address,
+    from: Address,
+    amount: i128,
+) -> Result<(), ContractError> {
+    spender.require_auth();
+
+    if amount <= 0 {
+        return Err(ContractError::InvalidAmount);
+    }
+
+    let allowance = Self::allowance(env.clone(), from.clone(), spender.clone());
+
+    if allowance < amount {
+        return Err(ContractError::InsufficientAllowance);
+    }
+
+    let balance = Self::balance(env.clone(), from.clone());
+
+    if balance < amount {
+        return Err(ContractError::InsufficientFunds);
+    }
+
+    let mut supply: i128 = env
+        .storage()
+        .persistent()
+        .get(&DataKey::TotalSupply)
+        .unwrap_or(0);
+
+    // update state
+    env.storage().persistent().set(
+        &DataKey::Balance(from.clone()),
+        &(balance - amount),
+    );
+
+    env.storage().persistent().set(
+        &DataKey::TotalSupply,
+        &(supply - amount),
+    );
+
+    env.storage().persistent().set(
+        &DataKey::Allowance(from.clone(), spender.clone()),
+        &(allowance - amount),
+    );
+
+    Ok(())
+}
+
     pub fn decimals(_env: Env) -> u32 {
         18
     }
