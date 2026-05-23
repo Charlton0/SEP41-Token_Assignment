@@ -119,10 +119,10 @@ env.storage().persistent().set(
 //Mint function creates new token and assign to user, this can only be done by admin
 fn mint(
     env: Env,
-    admin: Address,
     to: Address,
     amount: i128,
 ) -> Result<(), ContractError> {
+    let admin: Address = env.storage().persistent().get(&DataKey::Admin).expect("contract not initialized");
     admin.require_auth();
 
     if amount <= 0 {

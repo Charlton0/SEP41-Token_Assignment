@@ -75,7 +75,7 @@ fn test_mint() {
 
     setup_result.env.mock_all_auths();
 
-    setup_result
+    setup_result.
      client.mint(
     &setup_result.admin,
     &setup_result.receiver,
