@@ -3,16 +3,16 @@ use soroban_sdk::{contract, contractimpl, Address, Env, IntoVal, String};
 use crate::{
     error::ContractError,
     events::{Approval, Transfer},
-    storage::{AllowanceKey, DataKey},
+    storage::DataKey,
 };
 
 #[contract]
 pub struct Sep41Token;
 
 #[contractimpl]
-impl Sep41Token {
+impl crate::token_trait::TokenInterface for Sep41Token {
 
-    pub fn initialize(env: Env, admin: Address) {
+    fn initialize(env: Env, admin: Address) {
     if env
         .storage()
         .persistent()
@@ -30,27 +30,22 @@ impl Sep41Token {
         .set(&DataKey::TotalSupply, &0i128);
 }
 
-    fn get_admin(env: &Env) -> Address {
-    env.storage()
-        .persistent()
-        .get(&DataKey::Admin)
-        .unwrap()
-}
-    pub fn balance(env: Env, id: Address) -> i128 {
+
+    fn balance(env: Env, id: Address) -> i128 {
         env.storage()
             .persistent()
             .get(&DataKey::Balance(id))
             .unwrap_or(0)
     }
 
-    pub fn allowance(env: Env, from: Address, spender: Address) -> i128 {
+    fn allowance(env: Env, from: Address, spender: Address) -> i128 {
         env.storage()
             .persistent()
             .get(&DataKey::Allowance(from.clone(), spender.clone()))
             .unwrap_or(0)
     }
 
-    pub fn approve(
+    fn approve(
         env: Env,
         from: Address,
         spender: Address,
@@ -79,8 +74,8 @@ impl Sep41Token {
         Ok(())
     }
 
-    pub fn transfer(
-        env: &Env,
+    fn transfer(
+        env: Env,
         from: Address,
         to: Address,
         amount: i128,
@@ -109,12 +104,12 @@ env.storage().persistent().set(
             to,
             amount: amount.try_into().unwrap(),
         }
-        .publish(env);
+        .publish(&env);
 
         Ok(())
     }
 
-    pub fn total_supply(env: Env) -> i128 {
+    fn total_supply(env: Env) -> i128 {
     env.storage()
         .persistent()
         .get(&DataKey::TotalSupply)
@@ -122,12 +117,12 @@ env.storage().persistent().set(
 }
 
 //Mint function creates new token and assign to user, this can only be done by admin
-pub fn mint(
+fn mint(
     env: Env,
+    admin: Address,
     to: Address,
     amount: i128,
 ) -> Result<(), ContractError> {
-    let admin = Self::get_admin(&env);
     admin.require_auth();
 
     if amount <= 0 {
@@ -156,7 +151,7 @@ pub fn mint(
 }
 
 //Burn function destroys tokens from an address, performed by admin or owner
-pub fn burn(
+fn burn(
     env: Env,
     from: Address,
     amount: i128,
@@ -193,7 +188,7 @@ pub fn burn(
 }
 
 //This function allows Spender to move tokens on behalf of owner.
-pub fn transfer_from(
+fn transfer_from(
     env: Env,
     spender: Address,
     from: Address,
@@ -240,7 +235,7 @@ pub fn transfer_from(
 }
 
 //this fuction allows spender to burn tokens from owner
-pub fn burn_from(
+fn burn_from(
     env: Env,
     spender: Address,
     from: Address,
@@ -289,15 +284,25 @@ pub fn burn_from(
     Ok(())
 }
 
-    pub fn decimals(_env: Env) -> u32 {
+    fn decimals(_env: Env) -> u32 {
         18
     }
 
-    pub fn name(env: Env) -> String {
+    fn name(env: Env) -> String {
         String::from_str(&env, "Sep41Token")
     }
 
-    pub fn symbol(env: Env) -> String {
+    fn symbol(env: Env) -> String {
         String::from_str(&env, "SEP")
     }
+}
+
+//Helper function
+impl Sep41Token {
+    fn get_admin(env: &Env) -> Address {
+    env.storage()
+        .persistent()
+        .get(&DataKey::Admin)
+        .unwrap()
+}
 }
