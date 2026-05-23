@@ -31,3 +31,6 @@ The contract supports the following functionality:
 - Transfer on behalf of another account (`transfer_from`)
 - Allowance tracking per `(owner, spender)` pair
 
+## Deployed contract address
+CCGL3X7HVGIQGFBSZA3CRJEFOMV33UHGQCWBZF7P2PYE4QBHVMO6J6AZ
+
